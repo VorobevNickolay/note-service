@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"note-service/internal/pkg/jwt"
 
 	"github.com/gin-gonic/gin"
 	"note-service/internal/app"
@@ -27,6 +28,7 @@ func NewRouter(store userStore) *Router {
 func (r *Router) SetUpRouter(engine *gin.Engine) {
 	engine.GET("/user/:id", r.getUserByID)
 	engine.POST("/user", r.signUp)
+	engine.POST("/user/login", r.login)
 }
 
 func (r *Router) getUserByID(c *gin.Context) {
@@ -59,4 +61,31 @@ func (r *Router) signUp(c *gin.Context) {
 		return
 	}
 	c.IndentedJSON(http.StatusCreated, userModelFromUser(u))
+}
+
+func (r *Router) login(c *gin.Context) {
+	var u userpkg.User
+
+	if err := c.ShouldBindJSON(&u); err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, app.ErrorModel{Error: err.Error()})
+		return
+	}
+	u, err := r.store.FindUserByNameAndPassword(c, u.Username, u.Password)
+	if err != nil {
+		if errors.Is(err, userpkg.ErrUserNotFound) {
+			c.IndentedJSON(http.StatusNotFound, app.ErrorModel{Error: err.Error()})
+		} else if errors.Is(err, userpkg.ErrEmptyPassword) {
+			c.IndentedJSON(http.StatusBadRequest, app.ErrorModel{Error: err.Error()})
+		} else {
+			c.IndentedJSON(http.StatusInternalServerError, app.UnknownError)
+		}
+		return
+	}
+
+	token, err := jwt.CreateToken(u.ID)
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, app.ErrorModel{Error: err.Error()})
+		return
+	}
+	c.IndentedJSON(http.StatusOK, app.TokenModel{Token: token})
 }

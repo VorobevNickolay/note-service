@@ -25,11 +25,11 @@ func NewRouter(store noteStore) *Router {
 }
 
 func (r *Router) SetUpRouter(engine *gin.Engine) {
-	engine.GET("/notes", r.getNotes)
-	engine.GET("/note/:id", r.getNoteByID)
-	engine.POST("/note", r.postNote)
-	engine.PUT("/note/:id", r.updateNote)
-	engine.DELETE("/note/:id", r.deleteNote)
+	engine.GET("/notes", app.AuthMiddleware(), r.getNotes)
+	engine.GET("/note/:id", app.AuthMiddleware(), r.getNoteByID)
+	engine.POST("/note", app.AuthMiddleware(), r.postNote)
+	engine.PUT("/note/:id", app.AuthMiddleware(), r.updateNote)
+	engine.DELETE("/note/:id", app.AuthMiddleware(), r.deleteNote)
 }
 
 func (r *Router) postNote(c *gin.Context) {
@@ -39,7 +39,7 @@ func (r *Router) postNote(c *gin.Context) {
 		return
 	}
 
-	newNote.ID = c.GetString("noteID")
+	newNote.UserID = c.GetString("userId")
 	n, err := r.store.CreateNote(c, newNote)
 	if err != nil {
 		if errors.Is(err, notepkg.ErrEmptyNote) {
@@ -120,8 +120,8 @@ func (r *Router) deleteNote(c *gin.Context) {
 }
 
 func (r *Router) getNotes(c *gin.Context) {
-	noteID := c.Param("noteId")
-	notes, err := r.store.GetNotes(c, noteID)
+	userID := c.GetString("userId")
+	notes, err := r.store.GetNotes(c, userID)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, app.UnknownError)
 		return
