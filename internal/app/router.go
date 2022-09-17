@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+
 	"github.com/gin-gonic/gin"
 )
 

@@ -8,6 +8,8 @@ type User struct {
 	Password string `json:"password"`
 }
 
-var ErrUserNotFound = errors.New("user was not found")
-var ErrUsedUsername = errors.New("username already in use")
-var ErrEmptyPassword = errors.New("empty password or username")
+var (
+	ErrUserNotFound  = errors.New("user was not found")
+	ErrUsedUsername  = errors.New("username already in use")
+	ErrEmptyPassword = errors.New("empty password or username")
+)

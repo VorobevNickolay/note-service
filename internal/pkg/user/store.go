@@ -2,9 +2,10 @@ package user
 
 import (
 	"context"
-	"github.com/google/uuid"
 	"strings"
 	"sync"
+
+	"github.com/google/uuid"
 )
 
 type inMemoryStore struct {
@@ -19,6 +20,8 @@ func NewInMemoryStore() *inMemoryStore {
 func (store *inMemoryStore) CreateUser(ctx context.Context, name, password string) (User, error) {
 	store.Lock()
 	defer store.Unlock()
+
+	// todo: hash password
 
 	if len(password) == 0 || len(name) == 0 {
 		return User{}, ErrEmptyPassword
@@ -35,7 +38,7 @@ func (store *inMemoryStore) CreateUser(ctx context.Context, name, password strin
 	return user, nil
 }
 
-func (store *inMemoryStore) FindUserById(_ context.Context, id string) (User, error) {
+func (store *inMemoryStore) FindUserByID(_ context.Context, id string) (User, error) {
 	store.RLock()
 	defer store.RUnlock()
 
