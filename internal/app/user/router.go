@@ -1,7 +1,6 @@
 package user
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"note-service/internal/pkg/jwt"
@@ -11,44 +10,36 @@ import (
 	userpkg "note-service/internal/pkg/user"
 )
 
-type userStore interface {
-	CreateUser(ctx context.Context, name, password string) (userpkg.User, error)
-	FindUserByID(ctx context.Context, id string) (userpkg.User, error)
-	FindUserByNameAndPassword(ctx context.Context, name, password string) (userpkg.User, error)
+type userService interface {
+	SignUp(name, password string) (userpkg.User, error)
+	Login(name, password string) (userpkg.User, error)
 }
 
 type Router struct {
-	store userStore
+	service userService
 }
 
-func NewRouter(store userStore) *Router {
-	return &Router{store}
+func NewRouter(service userService) *Router {
+	return &Router{service: service}
 }
 
 func (r *Router) SetUpRouter(engine *gin.Engine) {
-	engine.GET("/user/:id", r.getUserByID)
 	engine.POST("/user", r.signUp)
 	engine.POST("/user/login", r.login)
 }
 
-func (r *Router) getUserByID(c *gin.Context) {
-	id := c.Param("id")
-	u, err := r.store.FindUserByID(c, id)
-	if err != nil {
-		c.IndentedJSON(http.StatusNotFound, app.ErrorModel{Error: err.Error()})
-		return
-	}
-	c.IndentedJSON(http.StatusOK, userModelFromUser(u))
-}
-
 func (r *Router) signUp(c *gin.Context) {
-	var newUser userpkg.User
-	if err := c.BindJSON(&newUser); err != nil {
+	var request SignUpRequest
+	if err := c.BindJSON(&request); err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, app.ErrorModel{Error: err.Error()})
 		return
 	}
-
-	u, err := r.store.CreateUser(c, newUser.Username, newUser.Password)
+	err := request.Validate()
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, err)
+		return
+	}
+	u, err := r.service.SignUp(request.Username, request.Password)
 	if err != nil {
 		switch {
 		case errors.Is(err, userpkg.ErrEmptyPassword):
@@ -60,22 +51,25 @@ func (r *Router) signUp(c *gin.Context) {
 		}
 		return
 	}
-	c.IndentedJSON(http.StatusCreated, userModelFromUser(u))
+	c.IndentedJSON(http.StatusCreated, userToUserResponse(u))
 }
 
 func (r *Router) login(c *gin.Context) {
-	var u userpkg.User
+	var request LoginRequest
 
-	if err := c.ShouldBindJSON(&u); err != nil {
+	if err := c.ShouldBindJSON(&request); err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, app.ErrorModel{Error: err.Error()})
 		return
 	}
-	u, err := r.store.FindUserByNameAndPassword(c, u.Username, u.Password)
+	err := request.Validate()
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, err)
+		return
+	}
+	u, err := r.service.Login(request.Username, request.Password)
 	if err != nil {
 		if errors.Is(err, userpkg.ErrUserNotFound) {
 			c.IndentedJSON(http.StatusNotFound, app.ErrorModel{Error: err.Error()})
-		} else if errors.Is(err, userpkg.ErrEmptyPassword) {
-			c.IndentedJSON(http.StatusBadRequest, app.ErrorModel{Error: err.Error()})
 		} else {
 			c.IndentedJSON(http.StatusInternalServerError, app.UnknownError)
 		}

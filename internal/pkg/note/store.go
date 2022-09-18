@@ -1,11 +1,11 @@
 package note
 
 import (
-	"context"
-	"github.com/google/uuid"
-	"golang.org/x/exp/maps"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
+	"golang.org/x/exp/maps"
 )
 
 // notes map[userId]map[noteId]Note
@@ -23,15 +23,12 @@ func NewInMemoryStore() *inMemoryStore {
 	}
 }
 
-func (store *inMemoryStore) CreateNote(_ context.Context, note Note) (Note, error) {
+func (store *inMemoryStore) CreateNote(note Note) (Note, error) {
 	store.Lock()
 	defer store.Unlock()
 
 	note.ID = uuid.NewString()
 	note.CreatedAt = time.Now().UTC()
-	if note.Text == "" {
-		return Note{}, ErrEmptyNote
-	}
 	if _, ok := store.notes[note.UserID]; !ok {
 		store.notes[note.UserID] = make(map[string]Note, 0)
 	}
@@ -40,11 +37,12 @@ func (store *inMemoryStore) CreateNote(_ context.Context, note Note) (Note, erro
 	return note, nil
 }
 
-func (store *inMemoryStore) GetNotes(_ context.Context, userID string) ([]Note, error) {
+func (store *inMemoryStore) GetNotes(userID string) ([]Note, error) {
 	v := maps.Values(store.notes[userID])
 	return v, nil
 }
-func (store *inMemoryStore) FindNoteByID(_ context.Context, id string) (Note, error) {
+
+func (store *inMemoryStore) FindNoteByID(id string) (Note, error) {
 	store.RLock()
 	defer store.RUnlock()
 
@@ -54,7 +52,7 @@ func (store *inMemoryStore) FindNoteByID(_ context.Context, id string) (Note, er
 	return Note{}, ErrNoteNotFound
 }
 
-func (store *inMemoryStore) DeleteNote(_ context.Context, id string) error {
+func (store *inMemoryStore) DeleteNote(id string) error {
 	store.Lock()
 	defer store.Unlock()
 
@@ -67,18 +65,12 @@ func (store *inMemoryStore) DeleteNote(_ context.Context, id string) error {
 	return nil
 }
 
-func (store *inMemoryStore) UpdateNote(_ context.Context, note Note) (Note, error) {
+func (store *inMemoryStore) UpdateNote(note Note) (Note, error) {
 	store.Lock()
 	defer store.Unlock()
-	var oldNote *Note
 
-	userID, ok := store.noteIDs[note.ID]
-	if !ok {
-		return Note{}, ErrNoteNotFound
-	}
-	*oldNote = store.notes[userID][note.ID]
-	*oldNote = note
-	oldNote.UpdatedAt = time.Now().UTC()
+	note.UpdatedAt = time.Now().UTC()
+	store.notes[note.UserID][note.ID] = note
 
-	return *oldNote, nil
+	return note, nil
 }

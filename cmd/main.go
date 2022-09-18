@@ -10,9 +10,11 @@ import (
 
 func main() {
 	userStore := userpkg.NewInMemoryStore()
-	userRouter := user.NewRouter(userStore)
+	userService := userpkg.NewService(userStore)
+	userRouter := user.NewRouter(userService)
 	noteStore := notepkg.NewInMemoryStore()
-	noteRouter := note.NewRouter(noteStore)
+	noteService := notepkg.NewService(noteStore)
+	noteRouter := note.NewRouter(noteService)
 	router := app.NewRouter(userRouter, noteRouter)
 	router.SetUpRouter()
 	router.Run()

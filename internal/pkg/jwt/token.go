@@ -2,8 +2,9 @@ package jwt
 
 import (
 	"errors"
-	"github.com/golang-jwt/jwt"
 	"time"
+
+	"github.com/golang-jwt/jwt"
 )
 
 var mySigningKey = []byte("BlaBlaBla123")

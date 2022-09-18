@@ -2,6 +2,6 @@ package user
 
 import "note-service/internal/pkg/user"
 
-func userModelFromUser(user user.User) Model {
-	return Model{user.ID, user.Username}
+func userToUserResponse(user user.User) UserResponse {
+	return UserResponse{user.ID, user.Username}
 }

@@ -1,7 +1,6 @@
 package note
 
 import (
-	"context"
 	"errors"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -9,19 +8,19 @@ import (
 	notepkg "note-service/internal/pkg/note"
 )
 
-type noteStore interface {
-	CreateNote(ctx context.Context, note notepkg.Note) (notepkg.Note, error)
-	FindNoteByID(ctx context.Context, id string) (notepkg.Note, error)
-	GetNotes(ctx context.Context, noteID string) ([]notepkg.Note, error)
-	UpdateNote(ctx context.Context, note notepkg.Note) (notepkg.Note, error)
-	DeleteNote(ctx context.Context, id string) error
+type noteService interface {
+	CreateNote(note notepkg.Note) (notepkg.Note, error)
+	FindNoteByID(id, userIDs string) (notepkg.Note, error)
+	GetNotes(noteID string) ([]notepkg.Note, error)
+	UpdateNote(note notepkg.Note) (notepkg.Note, error)
+	DeleteNote(id, userID string) error
 }
 type Router struct {
-	store noteStore
+	service noteService
 }
 
-func NewRouter(store noteStore) *Router {
-	return &Router{store}
+func NewRouter(service noteService) *Router {
+	return &Router{service}
 }
 
 func (r *Router) SetUpRouter(engine *gin.Engine) {
@@ -33,14 +32,21 @@ func (r *Router) SetUpRouter(engine *gin.Engine) {
 }
 
 func (r *Router) postNote(c *gin.Context) {
-	var newNote notepkg.Note
-	if err := c.BindJSON(&newNote); err != nil {
+	var request PostRequest
+	if err := c.BindJSON(&request); err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, app.ErrorModel{Error: err.Error()})
 		return
 	}
 
-	newNote.UserID = c.GetString("userId")
-	n, err := r.store.CreateNote(c, newNote)
+	request.UserID = c.GetString("userId")
+	err := request.Validate()
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, err)
+		return
+	}
+
+	note := postRequestToNote(request)
+	n, err := r.service.CreateNote(note)
 	if err != nil {
 		if errors.Is(err, notepkg.ErrEmptyNote) {
 			c.IndentedJSON(http.StatusBadRequest, app.ErrorModel{Error: err.Error()})
@@ -53,29 +59,26 @@ func (r *Router) postNote(c *gin.Context) {
 }
 
 func (r *Router) updateNote(c *gin.Context) {
-	id := c.Param("id")
-	noteID := c.GetString("noteID")
-	oldNote, err := r.store.FindNoteByID(c, id)
-	if err != nil {
-		if errors.Is(err, notepkg.ErrNoteNotFound) {
-			c.IndentedJSON(http.StatusNotFound, app.ErrorModel{Error: err.Error()})
-		}
-		c.IndentedJSON(http.StatusInternalServerError, app.UnknownError)
-		return
-	}
 
-	if oldNote.ID != noteID {
-		c.IndentedJSON(http.StatusForbidden, app.ErrorModel{Error: app.ErrNoAccess.Error()})
-		return
-	}
-
-	var newNote notepkg.Note
-	if err := c.BindJSON(&newNote); err != nil {
+	var request UpdateRequest
+	if err := c.BindJSON(&request); err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, app.ErrorModel{Error: err.Error()})
 		return
 	}
 
-	m, err := r.store.UpdateNote(c, newNote)
+	if request.ID != c.Param("id") {
+		c.IndentedJSON(http.StatusBadRequest, app.ErrorModel{Error: "id in url and json not equal"})
+		return
+	}
+	request.UserID = c.GetString("userId")
+	err := request.Validate()
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, err)
+		return
+	}
+
+	note := updateRequestToNote(request)
+	n, err := r.service.UpdateNote(note)
 	if err != nil {
 		if errors.Is(err, notepkg.ErrNoteNotFound) {
 			c.IndentedJSON(http.StatusNotFound, app.ErrorModel{Error: err.Error()})
@@ -86,33 +89,18 @@ func (r *Router) updateNote(c *gin.Context) {
 		}
 		return
 	}
-	c.IndentedJSON(http.StatusOK, m)
+	c.IndentedJSON(http.StatusOK, n)
 }
 
 func (r *Router) deleteNote(c *gin.Context) {
 	id := c.Param("id")
-	noteID := c.GetString("noteID")
-	oldNote, err := r.store.FindNoteByID(c, id)
+	UserID := c.GetString("userId")
+	err := r.service.DeleteNote(id, UserID)
 	if err != nil {
 		if errors.Is(err, notepkg.ErrNoteNotFound) {
 			c.IndentedJSON(http.StatusNotFound, app.ErrorModel{Error: err.Error()})
 		} else {
-			c.IndentedJSON(http.StatusInternalServerError, app.UnknownError)
-		}
-		return
-	}
-
-	if oldNote.ID != noteID {
-		c.IndentedJSON(http.StatusForbidden, app.ErrorModel{Error: app.ErrNoAccess.Error()})
-		return
-	}
-
-	err = r.store.DeleteNote(c, id)
-	if err != nil {
-		if errors.Is(err, notepkg.ErrNoteNotFound) {
-			c.IndentedJSON(http.StatusNotFound, app.ErrorModel{Error: err.Error()})
-		} else {
-			c.IndentedJSON(http.StatusInternalServerError, app.UnknownError)
+			c.IndentedJSON(http.StatusInternalServerError, app.ErrorModel{Error: err.Error()})
 		}
 		return
 	}
@@ -121,7 +109,7 @@ func (r *Router) deleteNote(c *gin.Context) {
 
 func (r *Router) getNotes(c *gin.Context) {
 	userID := c.GetString("userId")
-	notes, err := r.store.GetNotes(c, userID)
+	notes, err := r.service.GetNotes(userID)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, app.UnknownError)
 		return
@@ -131,8 +119,8 @@ func (r *Router) getNotes(c *gin.Context) {
 
 func (r *Router) getNoteByID(c *gin.Context) {
 	id := c.Param("id")
-
-	m, err := r.store.FindNoteByID(c, id)
+	userID := c.GetString("userId")
+	m, err := r.service.FindNoteByID(id, userID)
 	if err != nil {
 		if errors.Is(err, notepkg.ErrNoteNotFound) {
 			c.IndentedJSON(http.StatusNotFound, app.ErrorModel{Error: err.Error()})

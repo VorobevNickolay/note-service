@@ -14,11 +14,11 @@ func AuthMiddleware() gin.HandlerFunc {
 			c.AbortWithError(http.StatusUnauthorized, errors.New("empty token"))
 			return
 		}
-		userId, err := jwt.ParseToken(userToken)
+		userID, err := jwt.ParseToken(userToken)
 		if err != nil {
 			c.AbortWithError(http.StatusUnauthorized, errors.New("jwt parse error"))
 			return
 		}
-		c.Set("userId", userId)
+		c.Set("userId", userID)
 	}
 }
