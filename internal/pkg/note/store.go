@@ -1,6 +1,7 @@
 package note
 
 import (
+	"go.uber.org/zap"
 	"sync"
 	"time"
 
@@ -10,20 +11,24 @@ import (
 
 // notes map[userId]map[noteId]Note
 // noteIDs map[noteId] userId
-type inMemoryStore struct {
+type InMemoryStore struct {
 	sync.RWMutex
-	notes   map[string]map[string]Note
-	noteIDs map[string]string
+	notes    map[string]map[string]Note
+	noteIDs  map[string]string
+	notesTTL map[string]int64
+	logger   *zap.Logger
 }
 
-func NewInMemoryStore() *inMemoryStore {
-	return &inMemoryStore{
-		notes:   make(map[string]map[string]Note, 0),
-		noteIDs: make(map[string]string, 0),
+func NewInMemoryStore(logger *zap.Logger) *InMemoryStore {
+	return &InMemoryStore{
+		notes:    make(map[string]map[string]Note, 0),
+		noteIDs:  make(map[string]string, 0),
+		notesTTL: make(map[string]int64, 0),
+		logger:   logger,
 	}
 }
 
-func (store *inMemoryStore) CreateNote(note Note) (Note, error) {
+func (store *InMemoryStore) CreateNote(note Note) (Note, error) {
 	store.Lock()
 	defer store.Unlock()
 
@@ -34,15 +39,19 @@ func (store *inMemoryStore) CreateNote(note Note) (Note, error) {
 	}
 	store.notes[note.UserID][note.ID] = note
 	store.noteIDs[note.ID] = note.UserID
+	if note.TTL != nil {
+		store.notesTTL[note.ID] = *note.TTL
+	}
+
 	return note, nil
 }
 
-func (store *inMemoryStore) GetNotes(userID string) ([]Note, error) {
+func (store *InMemoryStore) GetNotes(userID string) ([]Note, error) {
 	v := maps.Values(store.notes[userID])
 	return v, nil
 }
 
-func (store *inMemoryStore) FindNoteByID(id string) (Note, error) {
+func (store *InMemoryStore) FindNoteByID(id string) (Note, error) {
 	store.RLock()
 	defer store.RUnlock()
 
@@ -52,7 +61,7 @@ func (store *inMemoryStore) FindNoteByID(id string) (Note, error) {
 	return Note{}, ErrNoteNotFound
 }
 
-func (store *inMemoryStore) DeleteNote(id string) error {
+func (store *InMemoryStore) DeleteNote(id string) error {
 	store.Lock()
 	defer store.Unlock()
 
@@ -62,15 +71,38 @@ func (store *inMemoryStore) DeleteNote(id string) error {
 	}
 	delete(store.notes[userID], id)
 	delete(store.noteIDs, id)
+	delete(store.notesTTL, id)
 	return nil
 }
 
-func (store *inMemoryStore) UpdateNote(note Note) (Note, error) {
+func (store *InMemoryStore) UpdateNote(note Note) (Note, error) {
 	store.Lock()
 	defer store.Unlock()
 
 	note.UpdatedAt = time.Now().UTC()
 	store.notes[note.UserID][note.ID] = note
+	if note.TTL != nil {
+		store.notesTTL[note.ID] = *note.TTL
+	} else {
+		delete(store.notesTTL, note.ID)
+	}
 
 	return note, nil
+}
+
+func (store *InMemoryStore) ExpireNotes() error {
+	store.Lock()
+	defer store.Unlock()
+
+	for noteID, ttl := range store.notesTTL {
+		if time.Now().UTC().Unix() >= ttl {
+			userID := store.noteIDs[noteID]
+			delete(store.notes[userID], noteID)
+			delete(store.noteIDs, noteID)
+			delete(store.notesTTL, noteID)
+			store.logger.Info("note was deleted", zap.String("noteID", noteID))
+		}
+	}
+
+	return nil
 }

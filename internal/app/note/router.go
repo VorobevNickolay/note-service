@@ -3,6 +3,7 @@ package note
 import (
 	"errors"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 	"net/http"
 	"note-service/internal/app"
 	notepkg "note-service/internal/pkg/note"
@@ -15,12 +16,14 @@ type noteService interface {
 	UpdateNote(note notepkg.Note) (notepkg.Note, error)
 	DeleteNote(id, userID string) error
 }
+
 type Router struct {
 	service noteService
+	logger  *zap.Logger
 }
 
-func NewRouter(service noteService) *Router {
-	return &Router{service}
+func NewRouter(service noteService, logger *zap.Logger) *Router {
+	return &Router{service: service, logger: logger}
 }
 
 func (r *Router) SetUpRouter(engine *gin.Engine) {
@@ -34,6 +37,7 @@ func (r *Router) SetUpRouter(engine *gin.Engine) {
 func (r *Router) postNote(c *gin.Context) {
 	var request PostRequest
 	if err := c.BindJSON(&request); err != nil {
+		r.logger.Error("failed to bind json", zap.Error(err))
 		c.IndentedJSON(http.StatusInternalServerError, app.ErrorModel{Error: err.Error()})
 		return
 	}
@@ -52,16 +56,19 @@ func (r *Router) postNote(c *gin.Context) {
 			c.IndentedJSON(http.StatusBadRequest, app.ErrorModel{Error: err.Error()})
 			return
 		}
+		r.logger.Error("failed to create note", zap.Error(err))
 		c.IndentedJSON(http.StatusInternalServerError, app.UnknownError)
 		return
 	}
-	c.IndentedJSON(http.StatusCreated, n)
+	r.logger.Info("note is created", zap.Any("note", noteToNoteResponse(n)))
+	c.IndentedJSON(http.StatusCreated, noteToNoteResponse(n))
 }
 
 func (r *Router) updateNote(c *gin.Context) {
 
 	var request UpdateRequest
 	if err := c.BindJSON(&request); err != nil {
+		r.logger.Error("failed to bind json", zap.Error(err))
 		c.IndentedJSON(http.StatusInternalServerError, app.ErrorModel{Error: err.Error()})
 		return
 	}
@@ -85,11 +92,13 @@ func (r *Router) updateNote(c *gin.Context) {
 		} else if errors.Is(err, notepkg.ErrEmptyNote) {
 			c.IndentedJSON(http.StatusBadRequest, app.ErrorModel{Error: err.Error()})
 		} else {
+			r.logger.Error("failed to update note", zap.Error(err))
 			c.IndentedJSON(http.StatusInternalServerError, app.UnknownError)
 		}
 		return
 	}
-	c.IndentedJSON(http.StatusOK, n)
+	r.logger.Info("note was updated", zap.Any("note", noteToNoteResponse(n)))
+	c.IndentedJSON(http.StatusOK, noteToNoteResponse(n))
 }
 
 func (r *Router) deleteNote(c *gin.Context) {
@@ -104,6 +113,7 @@ func (r *Router) deleteNote(c *gin.Context) {
 		}
 		return
 	}
+	r.logger.Info("note was deleted")
 	c.IndentedJSON(http.StatusOK, gin.H{"note": "note successfully deleted"})
 }
 
@@ -111,24 +121,26 @@ func (r *Router) getNotes(c *gin.Context) {
 	userID := c.GetString("userId")
 	notes, err := r.service.GetNotes(userID)
 	if err != nil {
+		r.logger.Error("failed to get notes", zap.Error(err))
 		c.IndentedJSON(http.StatusInternalServerError, app.UnknownError)
 		return
 	}
-	c.IndentedJSON(http.StatusOK, notes)
+	c.IndentedJSON(http.StatusOK, notesToNoteResponses(notes))
 }
 
 func (r *Router) getNoteByID(c *gin.Context) {
 	id := c.Param("id")
 	userID := c.GetString("userId")
-	m, err := r.service.FindNoteByID(id, userID)
+	n, err := r.service.FindNoteByID(id, userID)
 	if err != nil {
 		if errors.Is(err, notepkg.ErrNoteNotFound) {
 			c.IndentedJSON(http.StatusNotFound, app.ErrorModel{Error: err.Error()})
 		} else {
+			r.logger.Error("failed to get note by id", zap.Error(err))
 			c.IndentedJSON(http.StatusInternalServerError, app.UnknownError)
 		}
 		return
 	}
 
-	c.IndentedJSON(http.StatusOK, m)
+	c.IndentedJSON(http.StatusOK, noteToNoteResponse(n))
 }

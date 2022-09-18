@@ -2,8 +2,11 @@ package app
 
 import (
 	"errors"
+	"time"
 
+	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 var ErrNoAccess = errors.New("you have no access for this action")
@@ -16,8 +19,11 @@ type subRouter interface {
 	SetUpRouter(engine *gin.Engine)
 }
 
-func NewRouter(subRouters ...subRouter) *Router {
-	return &Router{gin.Default(), subRouters}
+func NewRouter(logger *zap.Logger, subRouters ...subRouter) *Router {
+	r := gin.New()
+	r.Use(ginzap.Ginzap(logger, time.RFC3339, true))
+	r.Use(ginzap.RecoveryWithZap(logger, true))
+	return &Router{r, subRouters}
 }
 
 func (r *Router) SetUpRouter() {

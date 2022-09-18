@@ -30,7 +30,7 @@ func (s *Service) FindNoteByID(id, userID string) (Note, error) {
 		return Note{}, err
 	}
 
-	if userID == note.UserID || note.IsPublic {
+	if userID == note.UserID || (note.IsPublic && note.PublicUsers == nil) {
 		return note, nil
 	}
 

@@ -2,6 +2,7 @@ package user
 
 import (
 	"errors"
+	"go.uber.org/zap"
 	"net/http"
 	"note-service/internal/pkg/jwt"
 
@@ -17,10 +18,11 @@ type userService interface {
 
 type Router struct {
 	service userService
+	logger  *zap.Logger
 }
 
-func NewRouter(service userService) *Router {
-	return &Router{service: service}
+func NewRouter(service userService, logger *zap.Logger) *Router {
+	return &Router{service: service, logger: logger}
 }
 
 func (r *Router) SetUpRouter(engine *gin.Engine) {
@@ -31,6 +33,7 @@ func (r *Router) SetUpRouter(engine *gin.Engine) {
 func (r *Router) signUp(c *gin.Context) {
 	var request SignUpRequest
 	if err := c.BindJSON(&request); err != nil {
+		r.logger.Error("failed to bind json", zap.Error(err))
 		c.IndentedJSON(http.StatusInternalServerError, app.ErrorModel{Error: err.Error()})
 		return
 	}
@@ -47,10 +50,12 @@ func (r *Router) signUp(c *gin.Context) {
 		case errors.Is(err, userpkg.ErrUsedUsername):
 			c.IndentedJSON(http.StatusConflict, app.ErrorModel{Error: err.Error()})
 		default:
+			r.logger.Error("failed to create jwt-token", zap.Error(err))
 			c.IndentedJSON(http.StatusInternalServerError, app.UnknownError)
 		}
 		return
 	}
+	r.logger.Info("user wass created", zap.Any("user", userToUserResponse(u)))
 	c.IndentedJSON(http.StatusCreated, userToUserResponse(u))
 }
 
@@ -58,6 +63,7 @@ func (r *Router) login(c *gin.Context) {
 	var request LoginRequest
 
 	if err := c.ShouldBindJSON(&request); err != nil {
+		r.logger.Error("failed to bind json", zap.Error(err))
 		c.IndentedJSON(http.StatusInternalServerError, app.ErrorModel{Error: err.Error()})
 		return
 	}
@@ -71,6 +77,7 @@ func (r *Router) login(c *gin.Context) {
 		if errors.Is(err, userpkg.ErrUserNotFound) {
 			c.IndentedJSON(http.StatusNotFound, app.ErrorModel{Error: err.Error()})
 		} else {
+			r.logger.Error("failed to create jwt-token", zap.Error(err))
 			c.IndentedJSON(http.StatusInternalServerError, app.UnknownError)
 		}
 		return
@@ -78,8 +85,10 @@ func (r *Router) login(c *gin.Context) {
 
 	token, err := jwt.CreateToken(u.ID)
 	if err != nil {
+		r.logger.Error("failed to create jwt-token", zap.Error(err))
 		c.IndentedJSON(http.StatusInternalServerError, app.ErrorModel{Error: err.Error()})
 		return
 	}
+	r.logger.Info("user was authorized")
 	c.IndentedJSON(http.StatusOK, app.TokenModel{Token: token})
 }

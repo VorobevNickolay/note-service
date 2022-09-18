@@ -7,16 +7,16 @@ import (
 	"github.com/google/uuid"
 )
 
-type inMemoryStore struct {
+type InMemoryStore struct {
 	sync.RWMutex
 	users map[string]User
 }
 
-func NewInMemoryStore() *inMemoryStore {
-	return &inMemoryStore{users: make(map[string]User)}
+func NewInMemoryStore() *InMemoryStore {
+	return &InMemoryStore{users: make(map[string]User)}
 }
 
-func (store *inMemoryStore) CreateUser(name, password string) (User, error) {
+func (store *InMemoryStore) CreateUser(name, password string) (User, error) {
 	store.Lock()
 	defer store.Unlock()
 
@@ -32,7 +32,7 @@ func (store *inMemoryStore) CreateUser(name, password string) (User, error) {
 	return user, nil
 }
 
-func (store *inMemoryStore) FindUserByID(id string) (User, error) {
+func (store *InMemoryStore) FindUserByID(id string) (User, error) {
 	store.RLock()
 	defer store.RUnlock()
 
@@ -46,7 +46,7 @@ func createPointer(u User) *User {
 	return &u
 }
 
-func (store *inMemoryStore) GetUsers() ([]*User, error) {
+func (store *InMemoryStore) GetUsers() ([]*User, error) {
 	store.RLock()
 	defer store.RUnlock()
 	res := make([]*User, len(store.users))
@@ -60,14 +60,14 @@ func (store *inMemoryStore) GetUsers() ([]*User, error) {
 	return res, nil
 }
 
-func (store *inMemoryStore) FindUserByName(name string) (User, error) {
+func (store *InMemoryStore) FindUserByName(name string) (User, error) {
 	store.RLock()
 	defer store.RUnlock()
 	return store.findUserByName(name)
 }
 
 // findUserByName find user and isn't thread-safe
-func (store *inMemoryStore) findUserByName(name string) (User, error) {
+func (store *InMemoryStore) findUserByName(name string) (User, error) {
 	for _, u := range store.users {
 		if strings.EqualFold(name, u.Username) {
 			return u, nil

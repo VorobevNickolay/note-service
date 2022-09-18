@@ -3,9 +3,9 @@ package user
 import "errors"
 
 type User struct {
-	ID       string `json:"id"`
-	Username string `json:"username"`
-	Password string `json:"password"`
+	ID       string
+	Username string
+	Password string
 }
 
 var (

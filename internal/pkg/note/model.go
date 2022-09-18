@@ -6,13 +6,13 @@ import (
 )
 
 type Note struct {
-	ID          string    `json:"id"`
-	UserID      string    `json:"userId"`
-	Subject     string    `json:"subject"`
-	Text        string    `json:"text"`
-	TTL         *int      `json:"ttl"`
-	IsPublic    bool      `json:"isPublic"`
-	PublicUsers *[]string `json:"publicUsers"`
+	ID          string
+	UserID      string
+	Subject     string
+	Text        string
+	TTL         *int64
+	IsPublic    bool
+	PublicUsers *[]string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
