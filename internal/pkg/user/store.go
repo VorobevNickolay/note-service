@@ -63,6 +63,7 @@ func (store *InMemoryStore) GetUsers() ([]*User, error) {
 func (store *InMemoryStore) FindUserByName(name string) (User, error) {
 	store.RLock()
 	defer store.RUnlock()
+
 	return store.findUserByName(name)
 }
 

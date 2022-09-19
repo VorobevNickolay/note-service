@@ -12,7 +12,7 @@ import (
 type noteService interface {
 	CreateNote(note notepkg.Note) (notepkg.Note, error)
 	FindNoteByID(id, userIDs string) (notepkg.Note, error)
-	GetNotes(noteID string) ([]notepkg.Note, error)
+	GetNotes(userID, param string) ([]notepkg.Note, error)
 	UpdateNote(note notepkg.Note) (notepkg.Note, error)
 	DeleteNote(id, userID string) error
 }
@@ -119,7 +119,8 @@ func (r *Router) deleteNote(c *gin.Context) {
 
 func (r *Router) getNotes(c *gin.Context) {
 	userID := c.GetString("userId")
-	notes, err := r.service.GetNotes(userID)
+	param := c.GetString("param")
+	notes, err := r.service.GetNotes(userID, param)
 	if err != nil {
 		r.logger.Error("failed to get notes", zap.Error(err))
 		c.IndentedJSON(http.StatusInternalServerError, app.UnknownError)

@@ -2,6 +2,8 @@ package note
 
 import (
 	"go.uber.org/zap"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -46,8 +48,28 @@ func (store *InMemoryStore) CreateNote(note Note) (Note, error) {
 	return note, nil
 }
 
-func (store *InMemoryStore) GetNotes(userID string) ([]Note, error) {
+func (store *InMemoryStore) GetNotes(userID, param string) ([]Note, error) {
 	v := maps.Values(store.notes[userID])
+	switch param {
+	case "ttl":
+		sort.SliceStable(v, func(i, j int) bool {
+			return *v[i].TTL < *v[j].TTL
+		})
+	case "subject":
+		sort.SliceStable(v, func(i, j int) bool {
+			return strings.Compare(v[i].Subject, v[j].Subject) < 0
+		})
+	case "created-at":
+		sort.SliceStable(v, func(i, j int) bool {
+			return v[i].CreatedAt.Before(v[j].CreatedAt)
+		})
+	case "updated-at":
+		sort.SliceStable(v, func(i, j int) bool {
+			return v[i].UpdatedAt.Before(v[j].UpdatedAt)
+		})
+	default:
+	}
+
 	return v, nil
 }
 

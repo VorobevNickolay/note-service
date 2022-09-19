@@ -7,7 +7,7 @@ import (
 type store interface {
 	CreateNote(note Note) (Note, error)
 	FindNoteByID(id string) (Note, error)
-	GetNotes(noteID string) ([]Note, error)
+	GetNotes(userID, param string) ([]Note, error)
 	UpdateNote(note Note) (Note, error)
 	DeleteNote(id string) error
 }
@@ -43,8 +43,8 @@ func (s *Service) FindNoteByID(id, userID string) (Note, error) {
 	return Note{}, app.ErrNoAccess
 }
 
-func (s *Service) GetNotes(id string) ([]Note, error) {
-	return s.store.GetNotes(id)
+func (s *Service) GetNotes(id, param string) ([]Note, error) {
+	return s.store.GetNotes(id, param)
 }
 
 func (s *Service) UpdateNote(note Note) (Note, error) {
@@ -52,6 +52,7 @@ func (s *Service) UpdateNote(note Note) (Note, error) {
 	if err != nil {
 		return Note{}, err
 	}
+
 	if n.UserID != note.UserID {
 		return Note{}, app.ErrNoAccess
 	}

@@ -20,6 +20,11 @@ func NewService(store store) *Service {
 }
 
 func (s *Service) SignUp(name, password string) (User, error) {
+	_, err := s.store.FindUserByName(name)
+	if err == nil {
+		return User{}, ErrUsedUsername
+	}
+
 	password = s.createHash(password)
 	user, err := s.store.CreateUser(name, password)
 	if err != nil {

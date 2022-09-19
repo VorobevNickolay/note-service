@@ -44,18 +44,15 @@ func (r *Router) signUp(c *gin.Context) {
 	}
 	u, err := r.service.SignUp(request.Username, request.Password)
 	if err != nil {
-		switch {
-		case errors.Is(err, userpkg.ErrEmptyPassword):
-			c.IndentedJSON(http.StatusBadRequest, app.ErrorModel{Error: err.Error()})
-		case errors.Is(err, userpkg.ErrUsedUsername):
+		if errors.Is(err, userpkg.ErrUsedUsername) {
 			c.IndentedJSON(http.StatusConflict, app.ErrorModel{Error: err.Error()})
-		default:
+		} else {
 			r.logger.Error("failed to create jwt-token", zap.Error(err))
 			c.IndentedJSON(http.StatusInternalServerError, app.UnknownError)
 		}
 		return
 	}
-	r.logger.Info("user wass created", zap.Any("user", userToUserResponse(u)))
+	r.logger.Info("user was created", zap.Any("user", userToUserResponse(u)))
 	c.IndentedJSON(http.StatusCreated, userToUserResponse(u))
 }
 
