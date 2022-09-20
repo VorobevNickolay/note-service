@@ -26,3 +26,5 @@ func (ve ValidationErrors) Error() string {
 }
 
 var UnknownError = ErrorModel{"Unknown error"}
+var UrlIDError = ErrorModel{"id in url and json not equal"}
+var AccessHeader = "X-Access-Token"

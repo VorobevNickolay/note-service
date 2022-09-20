@@ -52,11 +52,6 @@ func (r *Router) postNote(c *gin.Context) {
 	note := postRequestToNote(request)
 	n, err := r.service.CreateNote(note)
 	if err != nil {
-		if errors.Is(err, notepkg.ErrEmptyNote) {
-			c.IndentedJSON(http.StatusBadRequest, app.ErrorModel{Error: err.Error()})
-			return
-		}
-		r.logger.Error("failed to create note", zap.Error(err))
 		c.IndentedJSON(http.StatusInternalServerError, app.UnknownError)
 		return
 	}
@@ -74,7 +69,7 @@ func (r *Router) updateNote(c *gin.Context) {
 	}
 
 	if request.ID != c.Param("id") {
-		c.IndentedJSON(http.StatusBadRequest, app.ErrorModel{Error: "id in url and json not equal"})
+		c.IndentedJSON(http.StatusBadRequest, app.UrlIDError)
 		return
 	}
 	request.UserID = c.GetString("userId")
@@ -89,8 +84,6 @@ func (r *Router) updateNote(c *gin.Context) {
 	if err != nil {
 		if errors.Is(err, notepkg.ErrNoteNotFound) {
 			c.IndentedJSON(http.StatusNotFound, app.ErrorModel{Error: err.Error()})
-		} else if errors.Is(err, notepkg.ErrEmptyNote) {
-			c.IndentedJSON(http.StatusBadRequest, app.ErrorModel{Error: err.Error()})
 		} else {
 			r.logger.Error("failed to update note", zap.Error(err))
 			c.IndentedJSON(http.StatusInternalServerError, app.UnknownError)
@@ -109,7 +102,7 @@ func (r *Router) deleteNote(c *gin.Context) {
 		if errors.Is(err, notepkg.ErrNoteNotFound) {
 			c.IndentedJSON(http.StatusNotFound, app.ErrorModel{Error: err.Error()})
 		} else {
-			c.IndentedJSON(http.StatusInternalServerError, app.ErrorModel{Error: err.Error()})
+			c.IndentedJSON(http.StatusInternalServerError, app.UnknownError)
 		}
 		return
 	}
@@ -118,8 +111,13 @@ func (r *Router) deleteNote(c *gin.Context) {
 }
 
 func (r *Router) getNotes(c *gin.Context) {
+	var param string
+	if err := c.BindJSON(&param); err != nil {
+		r.logger.Error("failed to bind json", zap.Error(err))
+		c.IndentedJSON(http.StatusInternalServerError, app.ErrorModel{Error: err.Error()})
+		return
+	}
 	userID := c.GetString("userId")
-	param := c.GetString("param")
 	notes, err := r.service.GetNotes(userID, param)
 	if err != nil {
 		r.logger.Error("failed to get notes", zap.Error(err))
