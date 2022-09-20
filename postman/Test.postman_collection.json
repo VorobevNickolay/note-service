@@ -1,0 +1,202 @@
+{
+	"info": {
+		"_postman_id": "9af1ce96-07ef-484a-948d-ee22b4ad6eab",
+		"name": "Test",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "15627328"
+	},
+	"item": [
+		{
+			"name": "SignUp",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"username\": \"13\",\n    \"password\" : \"\"\n}"
+				},
+				"url": {
+					"raw": "localhost:8080/user",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"user"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Login",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"username\": \"12345\",\n    \"password\" : \"1244556677889900\"\n}"
+				},
+				"url": {
+					"raw": "localhost:8080/user/login",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"user",
+						"login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "CreateNote",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-Access-Token",
+						"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI5ZWU3NzExOC01NTM5LTQ0ZTItODI1My0wMTI4NjgzYjhkYzAiLCJleHAiOjE2NjM1MTg2MjgsImlzcyI6InRlc3QifQ.MM13sQtBi1PkFiBxv6LBTPuSQZWp-N9QpcqaWpK7kJo",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"text\": \"123\",\n    \"ttl\" : 1663518180\n}"
+				},
+				"url": {
+					"raw": "localhost:8080/note",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"note"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "UpdateNote",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-Access-Token",
+						"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI4MDliYmE5OC1hYjRjLTRmNDYtOGFjZi1jOWQ5YjVlZmI4YmIiLCJleHAiOjE2NjM0MTc2MzcsImlzcyI6InRlc3QifQ.r6jk1DYYMgK0f3-hHqo5oPYOsL52jVUC6o0datp8f1o",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"text\": \"123\"\n}"
+				},
+				"url": {
+					"raw": "localhost:8080/note",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"note"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "DeleteNote",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "X-Access-Token",
+						"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIyMWY4ZGQ4Ni05MTc5LTQwZGEtYjk1My1mNGYwMThiOTVhNmYiLCJleHAiOjE2NjM1MDg0NDEsImlzcyI6InRlc3QifQ.a6Mg89KGzQWXXng_pqqCIQVM37Bt6K7381aPhKYZlpc",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{}"
+				},
+				"url": {
+					"raw": "localhost:8080/note/33694e56-3301-4736-867d-7c0c910847fc",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"note",
+						"33694e56-3301-4736-867d-7c0c910847fc"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetNotes",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-Access-Token",
+						"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI3YzIzN2ZkNy1hZjE5LTQzM2ItODk0MC1iN2MzNzEyOTZlYjYiLCJleHAiOjE2NjM1MTkwMTcsImlzcyI6InRlc3QifQ.2EMg2dQfNJKemJESDGuYAP9tnzTAwisdVv4F2I8oynM",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"param\": \"\"\n}"
+				},
+				"url": {
+					"raw": "localhost:8080/notes",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"notes"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetNoteByID",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-Access-Token",
+						"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI4MDliYmE5OC1hYjRjLTRmNDYtOGFjZi1jOWQ5YjVlZmI4YmIiLCJleHAiOjE2NjM0MTc2MzcsImlzcyI6InRlc3QifQ.r6jk1DYYMgK0f3-hHqo5oPYOsL52jVUC6o0datp8f1o",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "localhost:8080/notes",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"notes"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
